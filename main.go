@@ -23,8 +23,6 @@ var (
 	delay     = flag.Duration("delay", 30*time.Minute, "Post the next event when it is at least this duration away.")
 	timezone  = flag.String("timezone", "America/Chicago", "The timezone to post events relative to.")
 	gdqEvent  = flag.String("gdq_event_name", "", "The event name of the GDQ event you'd like to track, such as 'sgdq2024'.")
-	// TODO: Remove this once the event has been merged upstream.
-	SGDQ2024 = gdq.Event{ID: 48, Short: "SGDQ2024", Name: "Summer Games Done Quick", Year: 2024}
 )
 
 type client struct {
@@ -135,14 +133,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	event := &SGDQ2024
-	if *gdqEvent != "" {
-		e, ok := gdq.GetEventByName(*gdqEvent)
-		if !ok {
-			fmt.Fprintf(os.Stderr, "couldn't find event with name %q", *gdqEvent)
-			os.Exit(1)
-		}
-		event = e
+	if *gdqEvent == "" {
+		fmt.Fprintln(os.Stderr, "no event name provided, pass it with --gdq_event_name")
+		os.Exit(1)
+	}
+
+	event, ok := gdq.GetEventByName(*gdqEvent)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "couldn't find event with name %q", *gdqEvent)
+		os.Exit(1)
 	}
 
 	dg, err := discordgo.New("Bot " + *token)
