@@ -12,7 +12,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	gdq "github.com/daenney/gdq/v2"
+	gdq "github.com/daenney/gdq/v3"
 	cron "github.com/robfig/cron/v3"
 )
 
@@ -22,7 +22,7 @@ var (
 	channelID = flag.String("channel_id", "", "The ID of the channel you'd like the bot to update.")
 	delay     = flag.Duration("delay", 30*time.Minute, "Post the next event when it is at least this duration away.")
 	timezone  = flag.String("timezone", "America/Chicago", "The timezone to post events relative to.")
-	gdqEvent  = flag.String("gdq_event_name", "", "The event name of the GDQ event you'd like to track, such as 'sgdq2024'.")
+	gdqEvent  = flag.String("gdq_event_name", "", "The event name of the GDQ event you'd like to track, such as 'sgdq2024'. Use 'latest' to get the latest event.")
 )
 
 type client struct {
@@ -33,10 +33,16 @@ type client struct {
 }
 
 func (c *client) msgChannel() error {
-	nr := c.sched.NextRun()
+	nr := c.sched.NextRun(time.Now())
 	starting := time.Until(nr.Start).Round(time.Minute)
 	start := nr.Start.In(c.tz)
-	msg := fmt.Sprintf("%q by %s starting in %v (%v) with an estimated duration of %v.", nr.Title, nr.Runners.String(), starting, start, nr.Estimate.Duration)
+
+	var runners []string
+	for _, talent := range nr.Runners {
+		runners = append(runners, talent.Name)
+	}
+
+	msg := fmt.Sprintf("%q by %s starting in %v (%v) with an estimated duration of %v.", nr.Title, strings.Join(runners, ", "), starting, start, nr.Estimate.Duration)
 
 	m, err := c.sess.ChannelMessageSend(*channelID, msg)
 	if err != nil {
@@ -48,7 +54,7 @@ func (c *client) msgChannel() error {
 }
 
 func (c *client) shouldPost() error {
-	nr := c.sched.NextRun()
+	nr := c.sched.NextRun(time.Now())
 	starting := time.Until(nr.Start).Round(time.Minute)
 
 	// Wait until duration before the event before posting it.
@@ -134,7 +140,7 @@ func main() {
 	}
 
 	if *gdqEvent == "" {
-		fmt.Fprintln(os.Stderr, "no event name provided, pass it with --gdq_event_name")
+		fmt.Fprintln(os.Stdout, "no event name provided, pass it with --gdq_event_name")
 		os.Exit(1)
 	}
 
@@ -151,8 +157,8 @@ func main() {
 	}
 	defer dg.Close()
 
-	g := gdq.New(ctx, &http.Client{})
-	sched, err := g.Schedule(event)
+	g := gdq.New(&http.Client{})
+	sched, err := g.Schedule(ctx, event.ID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create GDQ client: %v", err)
 		os.Exit(1)
