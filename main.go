@@ -22,7 +22,7 @@ var (
 	channelID = flag.String("channel_id", "", "The ID of the channel you'd like the bot to update.")
 	delay     = flag.Duration("delay", 30*time.Minute, "Post the next event when it is at least this duration away.")
 	timezone  = flag.String("timezone", "America/Chicago", "The timezone to post events relative to.")
-	gdqEvent  = flag.String("gdq_event_name", "", "The event name of the GDQ event you'd like to track, such as 'sgdq2024'. Use 'latest' to get the latest event.")
+	gdqEvent  = flag.String("gdq_event_name", "", "The event name of the GDQ event you'd like to track, such as 'sgdq2024'.")
 )
 
 type client struct {
